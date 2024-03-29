@@ -22,13 +22,13 @@ import {SablierWrapper} from './SablierWrapper.sol';
 contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
 
-    event Borrowed(address indexed borrower, uint loanId, uint amount, address collateralNftAddress, uint collateralTokenId);
+    event Borrowed(address indexed borrower, uint deadline, uint loanId, uint amount, address collateralNftAddress, uint collateralTokenId);
     event ClaimRepaid(address indexed borrower, uint loanId, address collateralNftAddress, uint collateralTokenId);
 
 
-    ISablierV2LockupLinear sablierLL = ISablierV2LockupLinear(0xFCF737582d167c7D20A336532eb8BCcA8CF8e350);
+    ISablierV2LockupLinear sablierLL = ISablierV2LockupLinear(0xbd7AAA2984c0a887E93c66baae222749883763d3);
   
-    IERC20 public USDC = IERC20(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+    IERC20 public USDC = IERC20(0x036cbd53842c5426634e7929541ec2318f3dcf7e);
     
     
     mapping (uint=>LoanInfo) public s_loanInfo;
@@ -41,7 +41,6 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         require(msg.sender == owner, "Not owner");
         _;
     }
-
 
     struct LoanInfo{
         address assetRequested;
@@ -100,17 +99,18 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
     }
     
     
-    function getLoanWithSablier(uint start, uint end, uint amount, address assetBorrowed, address assetCollateral, uint tokenId) public returns (uint){
+    function getLoanWithSablier(uint amount, address assetBorrowed, address assetCollateral, uint tokenId, address merchant) public returns (uint){
         //require((end-start) < 1 months, "Duration has to be less than a month");
         // require sablier nft renounced, transferable etc;
         
-        IERC20(assetBorrowed).transfer(msg.sender, amount);
+        IERC20(assetBorrowed).transfer(merchant, amount);
+        uint deadline = block.timestamp + 30 days;
         IERC721(assetCollateral).safeTransferFrom(msg.sender, address(this), tokenId);
-        _createRepaymentStream(start, end, amount, assetBorrowed);
-        LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, msg.sender, amount, tokenId, end, address(0));  
+        _createRepaymentStream(block.timestamp, block.timestamp + 30 days, amount, assetBorrowed);
+        LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, msg.sender, amount, tokenId, block.timestamp + 30 days, address(0));  
         s_loanInfo[loanCounter] = loanInfo;
 
-        emit Borrowed(msg.sender, loanCounter, amount, assetCollateral, tokenId);
+        emit Borrowed(msg.sender, deadline, loanCounter, amount, assetCollateral, tokenId);
         
         return loanCounter;
     }

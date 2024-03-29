@@ -23,7 +23,9 @@ import {SablierWrapper} from './SablierWrapper.sol';
 contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
 
-    // Event Borrowed(address indexed borrower, uint loanId);
+    event Borrowed(address indexed borrower, uint loanId, uint amount, address collateralNftAddress, address collateralTokenId);
+    event ClaimRepaid(address indexed borrower, uint loanId, address collateralNftAddress, address collateralTokenId);
+
 
     ISablierV2LockupLinear sablierLL = ISablierV2LockupLinear(0xFCF737582d167c7D20A336532eb8BCcA8CF8e350);
     ISablierV2NFTDescriptor sablierNFT = ISablierV2NFTDescriptor(0x67e0a126b695DBA35128860cd61926B90C420Ceb);
@@ -45,6 +47,7 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
     struct LoanInfo{
         address assetRequested;
         address assetCollateralized;
+        address borrower;
         uint requestedAmount;
         uint collateralId;
         uint deadline; 
@@ -105,7 +108,7 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         IERC20(assetBorrowed).transfer(msg.sender, amount);
         IERC721(assetCollateral).safeTransferFrom(msg.sender, address(this), tokenId);
         _createRepaymentStream(start, end, amount, assetBorrowed);
-        LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, amount, tokenId, end, address(0));  
+        LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, msg.sender, amount, tokenId, end, address(0));  
         s_loanInfo[loanCounter] = loanInfo;
         return loanCounter;
     }
@@ -145,6 +148,18 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         IERC20(address(this)).approve(wrapper, collected);
         SablierWrapper(wrapper).withdraw(collected);
     }
+
+    function claimRepaidSablierCollateral(uint loanId) public {
+      
+        
+
+    }
+
+    function checkRepaymentStatus(uint loanId) public view returns (bool repaid, uint repaidAmount) {
+        address wrapper = s_idToWrapper[loanId];
+        SablierWrapper(wrapper).getRepaidAmount();
+    }
+
     
     
     function onERC721Received(

@@ -14,27 +14,32 @@ contract SablierWrapper {
     address voucherAddress;
     address voucherSource;
     address BNPL;
+    uint collectedAmount;
+
+
 
     function initialize(address _voucherSource, uint streamId) external {
         require(!initialized, "Already initialized");
         voucherAddress = msg.sender;
         BNPL = msg.sender;
         voucherSource = _voucherSource;
-
         initialized = true;
     }
 
     function withdraw(uint amount) public {
         require(msg.sender == BNPL, "Not us");
+        collectedAmount += amount;
         IERC20(voucherAddress).transferFrom(BNPL, address(this), amount);
         IERC20(voucherSource).transfer(BNPL, amount);
-    }
-    
-    function getBalance() external view returns (uint){
-        return IERC20(voucherSource).balanceOf(address(this));
-    }
+    }   
 
     
+    
+
+    function getRepaidAmount() external view returns (uint){
+        // Collected Amount + Actual Balance
+        return (IERC20(voucherSource).balanceOf(address(this)) + collectedAmount);
+    }
 
     function onERC721Received(
         address operator,

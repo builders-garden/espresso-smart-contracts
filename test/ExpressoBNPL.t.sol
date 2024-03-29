@@ -39,11 +39,22 @@ contract ExpressoBNPLTest is Test, IERC721Receiver{
     function test_getLoanWithSablier() public {
         
         uint streamId = getSablierNFT();
-        
+        console.logUint(IERC20(usdcAddress).balanceOf(address(this)));
         IERC721(address(LL)).setApprovalForAll(address(exp), true);
         exp.getLoanWithSablier(block.timestamp, block.timestamp + 1 days, 1e10, usdcAddress, address(LL), streamId);
+          console.logUint(IERC20(usdcAddress).balanceOf(address(this)));
+        (
+        address assetRequested,
+        address assetCollateralized,
+        address borrower,
+        uint requestedAmount,
+        uint collateralId,
+        uint deadline,
+        ) = exp.s_loanInfo(1);
+        console.logAddress(borrower);
 
-    
+      
+       
     }
 
     function getSablierNFT() internal returns (uint){   
@@ -88,7 +99,7 @@ contract ExpressoBNPLTest is Test, IERC721Receiver{
         uint loanId = exp.getLoanWithSablier(block.timestamp, block.timestamp + 1 days, 1e10, usdcAddress, address(LL), streamId);
 
       
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(block.timestamp + 2 hours);
 
 
         address wrapper = exp.s_idToWrapper(loanId);
@@ -104,7 +115,12 @@ contract ExpressoBNPLTest is Test, IERC721Receiver{
         console.logUint(IERC20(usdcAddress).balanceOf(address(exp)));
         
     }
+
+
+
+    function test_Repaid() public {
             
+    }
    
     function onERC721Received(
         address,

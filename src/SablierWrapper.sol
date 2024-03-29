@@ -34,8 +34,6 @@ contract SablierWrapper {
     }   
 
     
-    
-
     function getRepaidAmount() external view returns (uint){
         // Collected Amount + Actual Balance
         return (IERC20(voucherSource).balanceOf(address(this)) + collectedAmount);

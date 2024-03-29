@@ -8,7 +8,6 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import { ISablierV2LockupLinear } from "@sablier/v2-core/src/interfaces/ISablierV2LockupLinear.sol";
-import { ISablierV2NFTDescriptor } from "@sablier/v2-core/src/interfaces/ISablierV2NFTDescriptor.sol";
 import { LockupLinear, Broker, Lockup } from '@sablier/v2-core/src/types/DataTypes.sol';
 import {SablierWrapper} from './SablierWrapper.sol';
 
@@ -23,13 +22,13 @@ import {SablierWrapper} from './SablierWrapper.sol';
 contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
 
-    event Borrowed(address indexed borrower, uint loanId, uint amount, address collateralNftAddress, address collateralTokenId);
-    event ClaimRepaid(address indexed borrower, uint loanId, address collateralNftAddress, address collateralTokenId);
+    event Borrowed(address indexed borrower, uint loanId, uint amount, address collateralNftAddress, uint collateralTokenId);
+    event ClaimRepaid(address indexed borrower, uint loanId, address collateralNftAddress, uint collateralTokenId);
 
 
     ISablierV2LockupLinear sablierLL = ISablierV2LockupLinear(0xFCF737582d167c7D20A336532eb8BCcA8CF8e350);
-    ISablierV2NFTDescriptor sablierNFT = ISablierV2NFTDescriptor(0x67e0a126b695DBA35128860cd61926B90C420Ceb);
-    IERC20 public USDC = IERC20(0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA);
+  
+    IERC20 public USDC = IERC20(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
     
     
     mapping (uint=>LoanInfo) public s_loanInfo;
@@ -110,6 +109,9 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         _createRepaymentStream(start, end, amount, assetBorrowed);
         LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, msg.sender, amount, tokenId, end, address(0));  
         s_loanInfo[loanCounter] = loanInfo;
+
+        emit Borrowed(msg.sender, loanCounter, amount, assetCollateral, tokenId);
+        
         return loanCounter;
     }
 
@@ -150,14 +152,20 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
     }
 
     function claimRepaidSablierCollateral(uint loanId) public {
-      
-        
+        LoanInfo memory loanInfo = s_loanInfo[loanId];
+        uint requestedAmount = loanInfo.requestedAmount;
+        uint streamId = loanInfo.collateralId;
+        address collateralAddress = loanInfo.assetCollateralized;
+        require(msg.sender == loanInfo.borrower);
+        require(checkRepayment(loanId) >= requestedAmount, "not repaid");
+        IERC721(collateralAddress).safeTransferFrom(address(this), msg.sender, streamId);
 
+        emit ClaimRepaid(msg.sender, loanId, collateralAddress, streamId);
     }
 
-    function checkRepaymentStatus(uint loanId) public view returns (bool repaid, uint repaidAmount) {
+    function checkRepayment(uint loanId) public view returns (uint repaidAmount) {
         address wrapper = s_idToWrapper[loanId];
-        SablierWrapper(wrapper).getRepaidAmount();
+        return SablierWrapper(wrapper).getRepaidAmount();
     }
 
     

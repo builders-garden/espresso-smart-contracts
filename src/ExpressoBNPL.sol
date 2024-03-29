@@ -11,13 +11,7 @@ import { ISablierV2LockupLinear } from "@sablier/v2-core/src/interfaces/ISablier
 import { LockupLinear, Broker, Lockup } from '@sablier/v2-core/src/types/DataTypes.sol';
 import {SablierWrapper} from './SablierWrapper.sol';
 
-// 1. User deposit nft
-// 2. user receives founds
-// 3. vault is created
-// 4. stream is created and linked to vault
-// 5. repayment occours in 4 instllments 
-//     a. installments miss penalties are accrued
-//     b. liquidation occours if deadline is missed
+
 
 contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
@@ -28,7 +22,7 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
 
     ISablierV2LockupLinear sablierLL = ISablierV2LockupLinear(0xbd7AAA2984c0a887E93c66baae222749883763d3);
   
-    IERC20 public USDC = IERC20(0x036cbd53842c5426634e7929541ec2318f3dcf7e);
+    IERC20 public USDC = IERC20(0x036CbD53842c5426634e7929541eC2318f3dCF7e);
     
     
     mapping (uint=>LoanInfo) public s_loanInfo;
@@ -100,9 +94,9 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
     
     function getLoanWithSablier(uint amount, address assetBorrowed, address assetCollateral, uint tokenId, address merchant) public returns (uint){
-        //require((end-start) < 1 months, "Duration has to be less than a month");
-        // require sablier nft renounced, transferable etc;
-        
+   
+       
+        require(isElegibleSablier(tokenId), "Not elegible Sablier, check cancel and transferable");
         IERC20(assetBorrowed).transfer(merchant, amount);
         uint deadline = block.timestamp + 30 days;
         IERC721(assetCollateral).safeTransferFrom(msg.sender, address(this), tokenId);
@@ -136,10 +130,6 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         Lockup.Amounts memory amounts = stream.amounts;
         return (amounts.deposited - amounts.withdrawn);
     }
-
-    // function getLoanWithElegibleNFT(uint start, uint end, uint amount, address assetBorrowed, address assetCollateral, uint tokenId) public {
-
-    // }
 
 
     function collectFromSablierAndUnwrap(uint streamId, uint loanId) public {

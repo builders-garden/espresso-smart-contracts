@@ -153,13 +153,16 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
 
     function claimRepaidSablierCollateral(uint loanId) public {
         LoanInfo memory loanInfo = s_loanInfo[loanId];
+        uint amountToRepay = loanInfo.requestedAmount;
+        USDC.transferFrom(msg.sender, address(this), amountToRepay);
+
         uint requestedAmount = loanInfo.requestedAmount;
         uint streamId = loanInfo.collateralId;
         address collateralAddress = loanInfo.assetCollateralized;
         require(msg.sender == loanInfo.borrower);
-        require(checkRepayment(loanId) >= requestedAmount, "not repaid");
+        //require(checkRepayment(loanId) >= requestedAmount, "not repaid");
         IERC721(collateralAddress).safeTransferFrom(address(this), msg.sender, streamId);
-
+        
         emit ClaimRepaid(msg.sender, loanId, collateralAddress, streamId);
     }
 
@@ -168,7 +171,6 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         return SablierWrapper(wrapper).getRepaidAmount();
     }
 
-    
     
     function onERC721Received(
         address,

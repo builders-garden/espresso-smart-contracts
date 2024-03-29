@@ -19,6 +19,7 @@ contract ExpressoBNPLTest is Test, IERC721Receiver{
     address usdcAddress = 0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA;
     address LL = 0xFCF737582d167c7D20A336532eb8BCcA8CF8e350;
     ExpressoBNPL exp;
+
     function setUp() public {
         exp = new ExpressoBNPL();
     }
@@ -41,6 +42,8 @@ contract ExpressoBNPLTest is Test, IERC721Receiver{
         
         IERC721(address(LL)).setApprovalForAll(address(exp), true);
         exp.getLoanWithSablier(block.timestamp, block.timestamp + 1 days, 1e10, usdcAddress, address(LL), streamId);
+
+    
     }
 
     function getSablierNFT() internal returns (uint){   
@@ -79,19 +82,24 @@ contract ExpressoBNPLTest is Test, IERC721Receiver{
         deal(address(exp), address(this), 1e10);
         IERC20(address(exp)).approve(address(exp), 1e10);
           
-        uint streamId = exp._createRepaymentStream(block.timestamp, block.timestamp + 1 days, 1e10, address(usdcAddress));
+        uint streamId = getSablierNFT();
         
+        IERC721(address(LL)).setApprovalForAll(address(exp), true);
+        uint loanId = exp.getLoanWithSablier(block.timestamp, block.timestamp + 1 days, 1e10, usdcAddress, address(LL), streamId);
+
+      
         vm.warp(block.timestamp + 1 days);
 
 
+        address wrapper = exp.s_idToWrapper(loanId);
+         console.logUint(IERC20(usdcAddress).balanceOf(wrapper));
+        console.logUint(IERC20(address(exp)).balanceOf(wrapper));
+        console.logUint(IERC20(usdcAddress).balanceOf(address(exp)));
 
-        (, , , , , address wrapper) = exp.s_loanInfo(exp.s_streamToInfo(streamId)); 
-
-
-        deal(usdcAddress, 0x037eDa3aDB1198021A9b2e88C22B464fD38db3f3, 1e10);
-        exp.collectFromSablierAndUnwrap(streamId);
-        console.logAddress(wrapper);
-        console.logUint(IERC20(usdcAddress).balanceOf(wrapper));
+        deal(usdcAddress, wrapper, 1e10);
+        exp.collectFromSablierAndUnwrap(streamId, loanId);
+        
+         console.logUint(IERC20(usdcAddress).balanceOf(wrapper));
         console.logUint(IERC20(address(exp)).balanceOf(wrapper));
         console.logUint(IERC20(usdcAddress).balanceOf(address(exp)));
         

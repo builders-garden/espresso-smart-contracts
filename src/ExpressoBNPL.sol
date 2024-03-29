@@ -22,6 +22,9 @@ import {SablierWrapper} from './SablierWrapper.sol';
 
 contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
+
+    // Event Borrowed(address indexed borrower, uint loanId);
+
     ISablierV2LockupLinear sablierLL = ISablierV2LockupLinear(0xFCF737582d167c7D20A336532eb8BCcA8CF8e350);
     ISablierV2NFTDescriptor sablierNFT = ISablierV2NFTDescriptor(0x67e0a126b695DBA35128860cd61926B90C420Ceb);
     IERC20 public USDC = IERC20(0xd9aAEc86B65D86f6A7B5B1b0c42FFA531710b6CA);
@@ -29,6 +32,7 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
     
     mapping (uint=>LoanInfo) public s_loanInfo;
     mapping (uint=>uint) public s_streamToInfo;
+    mapping (uint=>address) public s_idToWrapper;
     address wrapperImplementation;
     address public owner;
 
@@ -87,22 +91,23 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
         ( uint streamId ) = sablierLL.createWithRange(params); 
         s_streamToInfo[streamId] = loanCounter;
         address wrapper = cloneImpl(redeemableAsset, streamId);
-        LoanInfo storage loanInfo = s_loanInfo[loanCounter];
-        loanInfo.wrapperAddress = 0x037eDa3aDB1198021A9b2e88C22B464fD38db3f3;
+        
+        s_idToWrapper[loanCounter] = wrapper;
+        
         return streamId;
     }
     
     
-    function getLoanWithSablier(uint start, uint end, uint amount, address assetBorrowed, address assetCollateral, uint tokenId) public {
+    function getLoanWithSablier(uint start, uint end, uint amount, address assetBorrowed, address assetCollateral, uint tokenId) public returns (uint){
         //require((end-start) < 1 months, "Duration has to be less than a month");
         // require sablier nft renounced, transferable etc;
         
         IERC20(assetBorrowed).transfer(msg.sender, amount);
         IERC721(assetCollateral).safeTransferFrom(msg.sender, address(this), tokenId);
         _createRepaymentStream(start, end, amount, assetBorrowed);
-        
-        LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, amount, tokenId, end, 0x037eDa3aDB1198021A9b2e88C22B464fD38db3f3);  
+        LoanInfo memory loanInfo = LoanInfo(assetBorrowed, assetCollateral, amount, tokenId, end, address(0));  
         s_loanInfo[loanCounter] = loanInfo;
+        return loanCounter;
     }
 
     function isSablierCancelDisabled(LockupLinear.Stream memory stream) internal returns (bool){
@@ -132,13 +137,13 @@ contract ExpressoBNPL is IERC721Receiver, ERC20 {
     // }
 
 
-    function collectFromSablierAndUnwrap(uint streamId) public {
+    function collectFromSablierAndUnwrap(uint streamId, uint loanId) public {
         uint balanceBefore = balanceOf(address(this));
         sablierLL.withdrawMax(streamId, address(this));
         uint collected = balanceOf(address(this)) - balanceBefore;
-        address wrap = s_loanInfo[streamId].wrapperAddress;
-        IERC20(address(this)).approve(wrap, collected);
-        SablierWrapper(wrap).withdraw(collected);
+        address wrapper = s_idToWrapper[loanId];
+        IERC20(address(this)).approve(wrapper, collected);
+        SablierWrapper(wrapper).withdraw(collected);
     }
     
     
